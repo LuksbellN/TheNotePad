@@ -1,3 +1,4 @@
+#include <X11/X.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +19,20 @@ enum {
         WIN_BORDER = 1
 };
 
+#define woffset 8
+#define wdef 10
+#define hoffset 10
+#define hdef 10
 
+typedef struct cursor_pos {
+        int width_pos;
+        int height_pos;
+} cursor_pos;
+
+
+void handle_key_pressed(Display *display, Window window, struct _XGC *gc, cursor_pos *cursor, char text[], int keycode);
+
+ void draw_key(Display *display, Window window, struct _XGC *gc, int width, int height, char text[]);
 
 int tnp_window_builder_init() {
         XEvent event;
@@ -48,7 +62,7 @@ int tnp_window_builder_init() {
 
         XIM xim = XOpenIM(display, 0, 0, 0);
         if(!xim){
-                // fallback to internal input method
+                // fallback to internal input method 
                 XSetLocaleModifiers("@im=none");
                 xim = XOpenIM(display, 0, 0, 0);
 
@@ -81,19 +95,22 @@ int tnp_window_builder_init() {
         XSetForeground(display,gc,BlackPixel(display, screen));
 
         XClearWindow(display, window);
-
+        
+        cursor_pos cursor =  { .width_pos = wdef, .height_pos = hdef };
         /* event loop */
         while (1) {
                 XNextEvent(display, &event);
 
                 switch (event.type) {
                         case KeyPress:
+
                                 Status status;
                                 KeySym keysym = NoSymbol;
                                 char text[32] = {};
                                 Xutf8LookupString(xic, &event.xkey, text, sizeof(text) - 1, &keysym, &status);
-                                        XDrawString(display,window,gc,10,10, text, strlen(text));
-                                printf("%s", text);
+
+                                handle_key_pressed(display, window, gc, &cursor, text, event.xkey.keycode);
+   
                         case ClientMessage:
                                 if(event.xkey.keycode == XKeysymToKeycode(display, XK_Escape)){
                                         goto breakout;
@@ -118,4 +135,31 @@ breakout:
         return 0;
 
 }
+
+
+void handle_key_pressed(Display *display, Window window, struct _XGC *gc, cursor_pos *cursor, char text[], int keycode) {
+        if(keycode == 36){
+                cursor->height_pos += hoffset;
+                cursor->width_pos = wdef;
+        } else if(keycode == 22){
+                cursor->width_pos -= woffset;
+                /* TODO: Clean character*/
+        } else {
+                draw_key(display, window, gc, cursor->width_pos, cursor->height_pos, text);
+                cursor->width_pos += woffset;
+        }
+
+
+}
+
+
+
+ void draw_key(Display *display, Window window, struct _XGC *gc, int width, int height, char text[]){
+
+        XDrawString(display, window, gc, width, height, text, strlen(text));
+
+
+}
+
+
 
