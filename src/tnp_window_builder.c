@@ -144,6 +144,7 @@ void handle_key_pressed(Display *display, Window window, struct _XGC *gc, cursor
         } else if(keycode == 22){
                 cursor->width_pos -= woffset;
                 /* TODO: Clean character*/
+                 XClearArea(display, window, cursor->width_pos, cursor->height_pos-10, 12, 12, 1);
         } else {
                 draw_key(display, window, gc, cursor->width_pos, cursor->height_pos, text);
                 cursor->width_pos += woffset;
