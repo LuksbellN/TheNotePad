@@ -5,6 +5,12 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <time.h>
+#include <stdbool.h>
+
+
+#include "tnp_font_size_handler.h"
+#include "tnp_window_builder.h"
+#include "tnp_window_event_handler.h"
 
 enum {
         RECT_X = 200,
@@ -19,23 +25,16 @@ enum {
         WIN_BORDER = 1
 };
 
-#define woffset 8
-#define wdef 10
-#define hoffset 10
-#define hdef 10
 
-typedef struct cursor_pos {
-        int width_pos;
-        int height_pos;
-} cursor_pos;
+struct cursor_pos create_cursor_pos(int width, int height) {
+        return (struct cursor_pos){.width_pos = width, .height_pos = height};
+};
 
-
-void handle_key_pressed(Display *display, Window window, struct _XGC *gc, cursor_pos *cursor, char text[], int keycode);
-
- void draw_key(Display *display, Window window, struct _XGC *gc, int width, int height, char text[]);
-
-int tnp_window_builder_init() {
+int tnp_window_builder_init(struct app_sizes *sizes) {
         XEvent event;
+        char text[32] = {};
+
+        struct cursor_pos cursor =  create_cursor_pos(sizes->width_default, sizes->height_default);
 
         /* open connection with the server */
         Display *display = XOpenDisplay(NULL);
@@ -96,7 +95,6 @@ int tnp_window_builder_init() {
 
         XClearWindow(display, window);
         
-        cursor_pos cursor =  { .width_pos = wdef, .height_pos = hdef };
         /* event loop */
         while (1) {
                 XNextEvent(display, &event);
@@ -104,12 +102,8 @@ int tnp_window_builder_init() {
                 switch (event.type) {
                         case KeyPress:
 
-                                Status status;
-                                KeySym keysym = NoSymbol;
-                                char text[32] = {};
-                                Xutf8LookupString(xic, &event.xkey, text, sizeof(text) - 1, &keysym, &status);
-
-                                handle_key_pressed(display, window, gc, &cursor, text, event.xkey.keycode);
+                                get_character_typed(xic, &event.xkey, text);
+                                handle_key_pressed(display, window, gc, &cursor, text, event.xkey.keycode, sizes);
    
                         case ClientMessage:
                                 if(event.xkey.keycode == XKeysymToKeycode(display, XK_Escape)){
@@ -135,32 +129,5 @@ breakout:
         return 0;
 
 }
-
-
-void handle_key_pressed(Display *display, Window window, struct _XGC *gc, cursor_pos *cursor, char text[], int keycode) {
-        if(keycode == 36){
-                cursor->height_pos += hoffset;
-                cursor->width_pos = wdef;
-        } else if(keycode == 22){
-                cursor->width_pos -= woffset;
-                /* TODO: Clean character*/
-                 XClearArea(display, window, cursor->width_pos, cursor->height_pos-10, 12, 12, 1);
-        } else {
-                draw_key(display, window, gc, cursor->width_pos, cursor->height_pos, text);
-                cursor->width_pos += woffset;
-        }
-
-
-}
-
-
-
- void draw_key(Display *display, Window window, struct _XGC *gc, int width, int height, char text[]){
-
-        XDrawString(display, window, gc, width, height, text, strlen(text));
-
-
-}
-
 
 
